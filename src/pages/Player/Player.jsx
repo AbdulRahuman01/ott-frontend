@@ -2,7 +2,6 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import axiosClient from "../../api/axiosClient";
 import { MessageSquare, Star, User } from 'lucide-react'; 
-import ReactPlayer from 'react-player';
 
 export default function Player() {
   const { id } = useParams();
@@ -11,15 +10,17 @@ export default function Player() {
   const [movie, setMovie] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // ⭐ Subscription state
+  // ⭐ Subscription state (NEW)
   const [subscription, setSubscription] = useState(null);
 
   // ⭐ Review System States
   const [avgRating, setAvgRating] = useState(0);
   const [reviews, setReviews] = useState([]);
+
   const [userRating, setUserRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
   const [comment, setComment] = useState("");
+
   const [reviewMsg, setReviewMsg] = useState("");
 
   // ---------------- FETCH MOVIE ----------------
@@ -38,12 +39,12 @@ export default function Player() {
     fetchMovie();
   }, [id]);
 
-  // ---------------- FETCH SUBSCRIPTION ----------------
+  // ---------------- FETCH SUBSCRIPTION (NEW) ----------------
   const loadSubscription = async () => {
     try {
       const res = await axiosClient.get("users/subscription/");
       setSubscription(res.data);
-    } catch {
+    } catch (err) {
       setSubscription(null);
     }
   };
@@ -106,7 +107,7 @@ export default function Player() {
     }
   };
 
-  // ---------------- LOADING STATE ----------------
+  // ---------------- LOADING UI ----------------
   if (loading) {
     return (
       <div className="w-full min-h-screen bg-black flex items-center justify-center text-white text-xl">
@@ -148,6 +149,15 @@ export default function Player() {
     }
   }
 
+  // ---------- Helper: detect source ----------
+  const isYouTube = (url = "") =>
+    url.includes("youtube.com") || url.includes("youtu.be");
+
+  const isDirectVideo = (url = "") => {
+    // basic check for common direct video extensions
+    return /\.(mp4|webm|ogg|mkv)(\?.*)?$/i.test(url);
+  };
+
   // ⭐ Helper: Star Display
   const StarDisplay = ({ rating, size = 16 }) => (
     <div className="flex items-center">
@@ -166,69 +176,117 @@ export default function Player() {
   return (
     <div className="relative w-full min-h-screen bg-black text-white flex flex-col pt-24">
 
-      {/* VIDEO PLAYER */}
-      <div className="flex-grow flex justify-center items-center px-4 pb-10">
+      {/* ---------------- VIDEO ---------------- */}
+      <div
+        className="w-full flex justify-center items-center px-4 pb-10"
+        // ensure player area won't collapse on small screens
+        style={{ minHeight: 240 }}
+      >
         {movie.video_url ? (
-          <ReactPlayer 
-            key={movie.video_url} 
-            url={movie.video_url}
-            controls={true}
-            playing={false}
-            width="100%"
-            height="100%"
-            style={{ maxWidth: "900px", borderRadius: "10px" }}
-          />
+          isYouTube(movie.video_url) ? (
+            // YOUTUBE IFRAME (responsive)
+            <div style={{ width: "100%", maxWidth: 900, aspectRatio: "16/9" }}>
+              <iframe
+                title={movie.title || "player"}
+                src={
+                  movie.video_url.includes("watch?v=")
+                    ? movie.video_url.replace("watch?v=", "embed/")
+                    : movie.video_url.includes("youtu.be/")
+                    ? movie.video_url.replace("youtu.be/", "www.youtube.com/embed/")
+                    : movie.video_url
+                }
+                width="100%"
+                height="100%"
+                frameBorder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+                style={{ borderRadius: 8 }}
+              ></iframe>
+            </div>
+          ) : isDirectVideo(movie.video_url) ? (
+            // HTML5 video player
+            <div style={{ width: "100%", maxWidth: 900 }}>
+              <video
+                key={movie.video_url}
+                controls
+                style={{ width: "100%", borderRadius: 8, backgroundColor: "black" }}
+                // remove autoplay to avoid mobile autoplay restrictions
+              >
+                <source src={movie.video_url} />
+                Your browser does not support the video tag.
+              </video>
+            </div>
+          ) : (
+            // Last fallback: try using <video> anyway (some CDNs serve without extension)
+            <div style={{ width: "100%", maxWidth: 900 }}>
+              <video
+                key={movie.video_url}
+                controls
+                style={{ width: "100%", borderRadius: 8, backgroundColor: "black" }}
+              >
+                <source src={movie.video_url} />
+                Unable to play this video format in the browser.
+              </video>
+
+              {/* Helpful hint */}
+              <p className="text-sm text-gray-400 mt-2">
+                If this link is a YouTube link, it will open in the embedded player.
+                For other providers you might need a direct .mp4/.webm URL or an embed URL.
+              </p>
+            </div>
+          )
         ) : (
           <p className="text-gray-400">No video available</p>
         )}
       </div>
 
-      {/* REVIEWS SECTION */}
+      {/* ---------------- REVIEWS SECTION ---------------- */}
       <div className="w-full max-w-4xl mx-auto px-6 mt-10 pb-20">
         <h2 className="text-3xl font-bold mb-6 flex items-center gap-3 border-b border-gray-700 pb-3">
-          <MessageSquare className="text-red-500" size={28} /> User Ratings & Reviews
+            <MessageSquare className="text-red-500" size={28} /> User Ratings & Reviews
         </h2>
 
-        {/* AVERAGE RATING */}
+        {/* AVERAGE RATING DISPLAY */}
         <div className="flex items-center gap-6 mb-10 p-5 bg-neutral-900 rounded-xl shadow-xl border border-gray-800">
-          <div className="text-center">
-            <p className="text-6xl font-extrabold text-yellow-400">
-              {avgRating.toFixed(1)}
-            </p>
-            <p className="text-sm text-gray-400 mt-1">AVG RATING</p>
-          </div>
-
-          <div className="flex flex-col gap-1">
-            <StarDisplay rating={avgRating} size={24} />
-            <p className="text-md text-gray-300 font-medium">
-              {reviews.length} total review{reviews.length !== 1 ? 's' : ''}
-            </p>
-          </div>
+            <div className="text-center">
+                <p className="text-6xl font-extrabold text-yellow-400">
+                    {avgRating.toFixed(1)}
+                </p>
+                <p className="text-sm text-gray-400 mt-1">
+                    AVG RATING
+                </p>
+            </div>
+            <div className="flex flex-col gap-1">
+                <StarDisplay rating={avgRating} size={24} />
+                <p className="text-md text-gray-300 font-medium">
+                    {reviews.length} total review{reviews.length !== 1 ? 's' : ''}
+                </p>
+            </div>
         </div>
 
-        {/* USER REVIEW BOX */}
+        {/* USER RATE BOX */}
         <div className="bg-neutral-900 p-6 rounded-xl border border-gray-700 mb-10">
           <h3 className="text-xl font-semibold mb-4">Rate This Movie</h3>
 
-          {/* STARS */}
+          {/* STAR SELECTOR */}
           <div className="flex items-center gap-4 mb-4">
             <span className="text-lg font-medium text-gray-300">Your Score:</span>
             <div className="flex gap-1">
-              {[1, 2, 3, 4, 5].map((star) => (
+                {[1, 2, 3, 4, 5].map((star) => (
                 <span
-                  key={star}
-                  onMouseEnter={() => setHoverRating(star)}
-                  onMouseLeave={() => setHoverRating(0)}
-                  onClick={() => setUserRating(star)}
-                  className={`cursor-pointer text-4xl transition duration-150 ${
+                    key={star}
+                    onMouseEnter={() => setHoverRating(star)}
+                    onMouseLeave={() => setHoverRating(0)}
+                    onClick={() => setUserRating(star)}
+                    className={`cursor-pointer text-4xl transition duration-150 ${
                     (hoverRating || userRating) >= star
-                      ? "text-yellow-400 scale-110"
-                      : "text-gray-700 hover:text-gray-500"
-                  }`}
+                        ? "text-yellow-400 scale-110"
+                        : "text-gray-700 hover:text-gray-500"
+                    }`}
                 >
-                  ★
+                    ★
                 </span>
-              ))}
+                ))}
             </div>
           </div>
 
@@ -249,23 +307,21 @@ export default function Player() {
           </button>
 
           {reviewMsg && (
-            <p
-              className={`mt-3 text-sm font-medium p-2 rounded ${
-                reviewMsg.includes("Error") || reviewMsg.includes("select rating")
-                  ? "bg-red-900/50 text-red-400"
-                  : "bg-green-900/50 text-green-400"
-              }`}
-            >
-              {reviewMsg}
+            <p className={`mt-3 text-sm font-medium p-2 rounded ${
+                reviewMsg.includes("Error") || reviewMsg.includes("select rating") 
+                    ? 'bg-red-900/50 text-red-400' 
+                    : 'bg-green-900/50 text-green-400'
+            }`}>
+                {reviewMsg}
             </p>
           )}
         </div>
 
-        {/* EXISTING REVIEWS */}
+        {/* EXISTING REVIEWS LIST */}
         <h3 className="text-xl font-bold mb-4 border-l-4 border-red-600 pl-3">What Others Say</h3>
 
         {reviews.length === 0 ? (
-          <p className="text-gray-400 p-4 bg-neutral-900 rounded-lg">No reviews yet…</p>
+          <p className="text-gray-400 p-4 bg-neutral-900 rounded-lg">No reviews yet. Be the first to share your opinion!</p>
         ) : (
           <div className="flex flex-col gap-4">
             {reviews.map((r, index) => (
@@ -275,24 +331,23 @@ export default function Player() {
               >
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
-                    <User size={18} className="text-red-500" />
-                    <span className="text-md font-semibold text-white">{r.user}</span>
+                      <User size={18} className="text-red-500"/>
+                      <span className="text-md font-semibold text-white">{r.user}</span>
                   </div>
                   <span className="text-sm text-gray-500">{r.created_at}</span>
                 </div>
-
+                
                 <div className="mb-3">
-                  <StarDisplay rating={r.rating} size={18} />
+                    <StarDisplay rating={r.rating} size={18} />
                 </div>
-
+                
                 <p className="text-gray-300 italic leading-relaxed">
-                  "{r.comment || "(The reviewer left no comment)"}"
+                    "{r.comment || "(The reviewer left no comment)"}"
                 </p>
               </div>
             ))}
           </div>
         )}
-
       </div>
     </div>
   );
