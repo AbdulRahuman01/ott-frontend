@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import {Crown} from "lucide-react";
+import { Crown } from "lucide-react";
 
 export default function MovieCard({ movie, requireLogin }) {
   const navigate = useNavigate();
@@ -7,7 +7,7 @@ export default function MovieCard({ movie, requireLogin }) {
   const handleClick = () => {
     if (requireLogin) {
       // Home page protection
-      requireLogin(() => 
+      requireLogin(() =>
         navigate(`/movies/${movie.id}`, { state: { movie } })
       );
     } else {
@@ -17,32 +17,50 @@ export default function MovieCard({ movie, requireLogin }) {
   };
 
   return (
-    <div onClick={handleClick} className="relative group cursor-pointer">
+    <div onClick={handleClick} className="cursor-pointer">
 
-      {/* ⭐ PREMIUM BADGE */}
-      {movie.is_premium && (
-        <div className="absolute top-2 right-2 z-20">
-          <Crown 
-            size={20} 
-            className="text-white drop-shadow-[0_0_4px_rgba(255,255,255,0.8)]"
-          />
+      <div className="relative group">
+
+        {/* ⭐ PREMIUM BADGE */}
+        {movie.is_premium && (
+          <div className="absolute top-2 right-2 z-20">
+            <Crown
+              size={20}
+              className="text-white drop-shadow-[0_0_4px_rgba(255,255,255,0.8)]"
+            />
+          </div>
+        )}
+
+        <img
+          src={movie.poster}
+          className="w-full aspect-[2/3] object-cover rounded-lg shadow-lg
+transition-all duration-300 group-hover:scale-105"
+        />
+
+        {/* TITLE OVERLAY → DESKTOP ONLY */}
+        <div
+          className="
+            hidden md:block
+            absolute bottom-0 left-0 w-full p-3
+            bg-black bg-opacity-60 opacity-0 group-hover:opacity-100
+            rounded-b-lg transition-all duration-300
+          "
+        >
+          <h3 className="text-white text-sm font-semibold truncate">
+            {movie.title}
+          </h3>
         </div>
-      )}
-
-
-      <img
-        src={movie.poster}
-        className="w-full h-28 sm:h-64 object-cover rounded-lg shadow-lg 
-        transition-all duration-300 group-hover:scale-105"
-      />
-
-      <div className="absolute bottom-0 left-0 w-full p-3 
-        bg-black bg-opacity-60 opacity-0 group-hover:opacity-100
-        rounded-b-lg transition-all duration-300">
-        <h3 className="text-white text-sm font-semibold truncate">
-          {movie.title}
-        </h3>
       </div>
+
+      {/* TITLE BELOW IMAGE → MOBILE ONLY */}
+      <h3
+        className="
+          mt-2 text-white text-sm font-semibold text-center
+          md:hidden line-clamp-2
+        "
+      >
+        {movie.title}
+      </h3>
 
     </div>
   );

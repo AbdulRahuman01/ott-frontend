@@ -16,6 +16,8 @@ import Home from "../pages/Home/Home";
 
 import Settings from "../pages/User/Settings";
 
+import PublicRoute from "../components/PublicRoute";
+
 export default function AppRouter() {
   const token = localStorage.getItem("token");
 
@@ -25,8 +27,8 @@ export default function AppRouter() {
 
   <Routes>
     <Route path="/" element={<Home />} />
-    <Route path="/login" element={<Login />} />
-    <Route path="/register" element={<Register />} />
+    <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
+    <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
 
     <Route path="/movies" element={<ProtectedRoute><MoviesList /></ProtectedRoute>} />
     <Route path="/movies/:id" element={<ProtectedRoute><MovieDetails /></ProtectedRoute>} />
